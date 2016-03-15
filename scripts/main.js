@@ -1,3 +1,7 @@
+renderer = new THREE.WebGLRenderer();
+renderer.setSize( window.innerWidth, window.innerHeight );
+document.body.appendChild( renderer.domElement );
+
 var currentMap;
 var saveMainMap;
 var zooming;
@@ -5,112 +9,54 @@ var shift = false;
 var raycaster = new THREE.Raycaster();
 var cursor = new THREE.Vector2();
 
-renderer = new THREE.WebGLRenderer();
-renderer.setSize( window.innerWidth, window.innerHeight );
-document.body.appendChild( renderer.domElement );
-
 $(document).ready(function() {
+	createEventListeners();
 	var galaxyMap = new Map('galaxy');
+
 	$.get('http://localhost:3000/stars')
 	.done(function(stars) {
-		var sprite = new THREE.CanvasTexture(starSprite());
-		var starGeometry = new THREE.Geometry();
-		starGeometry.vertices = stars.map(function(star) {
-			return new THREE.Vector3( star.x, star.y, star.z);
-		});
-		starGeometry.colors = stars.map(function(star) {
-			var hsl = 'hsl(' + star.h + ', ' + Math.abs(star.s) + '%, ' + star.l + '%)';
-			return new THREE.Color(hsl);
-		});
-		starGeometry.label = stars.map(function(star) {
-			return star.name;
-		});
-		starGeometry.starId = stars.map(function(star) {
-			return star.id;
-		});
+		galaxyMap.stars = new THREE.Points(createStarGeometry(stars), createStarMaterial());
+		galaxyMap.scene.add(galaxyMap.stars);
 
-		var starMaterial = new THREE.PointsMaterial({
-			size: 0.9,
-			vertexColors: THREE.VertexColors,
-			map: sprite,
-			blending: THREE.AdditiveBlending,
-			transparent: true,
-			depthWrite: false,
-		});
-		starGeometry.rotateY(2.5);
-		starGeometry.rotateX(0.2);
-		starGeometry.rotateZ(-0.2);
-		var starPointSystem = new THREE.Points(starGeometry, starMaterial);
-		galaxyMap.stars = starPointSystem;
-		galaxyMap.scene.add(starPointSystem);
-		galaxyMap.camera.position.z = 200;
 		currentMap = galaxyMap;
-
+		currentMap.camera.position.z = 200;
 		currentMap.lastSelected = false;
-
-		createEventListeners();
 
 		render();
 	});
 });
 
-function Map(type) {
-	this.type = type;
-	this.scene = new THREE.Scene();
-	this.scene.fog = new THREE.FogExp2(0x5500dd, 0.01);
-	this.camera = new THREE.PerspectiveCamera( 75, window.innerWidth/window.innerHeight, 0.1, 1000 );
-}
-
-function setUpStarMap (star_id) {
-	var starMap = new Map('star');
-	switchMap(starMap);
-	$('.label').text(star_id);
-	$('.back').css('display', 'block');
-	$('.zoom-controls').css('display', 'none');
-}
-
-function switchMap (map) {
-	if (map) {
-		saveMainMap = currentMap;
-		currentMap = map;
-	} else {
-		currentMap = saveMainMap;
-		$('.zoom-controls').css('display', 'block');
-		$('.back').css('display', 'none');
-	}
-}
-
 function render () {
 	requestAnimationFrame( render );
 
 	if (currentMap.type == 'galaxy') {
-		raycaster.setFromCamera( cursor, currentMap.camera, 0, 1);	
-
-		var selected = raycaster.intersectObjects(currentMap.scene.children, true);
-
-		if (selected.length) {
-			currentMap.selected = selected[0];
-
-			if (currentMap.lastSelected !== currentMap.selected.index) {
-				$('.label').text(currentMap.stars.geometry.label[currentMap.selected.index]);
-				if (currentMap.lastSelectedColor) {
-					currentMap.stars.geometry.colors[currentMap.lastSelected].set(currentMap.lastSelectedColor);
-				}
-				currentMap.lastSelectedColor = new THREE.Color().copy(currentMap.selected.object.geometry.colors[currentMap.selected.index]);
-			}
-
-			currentMap.selected.object.geometry.colors[currentMap.selected.index].set( 0x55eeff );
-			currentMap.lastSelected = currentMap.selected.index;
-
-			currentMap.stars.geometry.colorsNeedUpdate = true;
-
-		} else {
-			currentMap.selected = false;
-		}
-
+		updateGalaxyMap();
 	}
 
 	renderer.render(currentMap.scene, currentMap.camera);
+}
+
+function updateGalaxyMap() {
+	raycaster.setFromCamera( cursor, currentMap.camera, 0, 1);	
+	var selected = raycaster.intersectObjects(currentMap.scene.children, true);
+
+	if (selected.length) {
+		currentMap.selected = selected[0];
+
+		if (currentMap.lastSelected !== currentMap.selected.index) {
+			$('.label').text(currentMap.stars.geometry.label[currentMap.selected.index]);
+			if (currentMap.lastSelectedColor) {
+				currentMap.stars.geometry.colors[currentMap.lastSelected].set(currentMap.lastSelectedColor);
+			}
+			currentMap.lastSelectedColor = new THREE.Color().copy(currentMap.selected.object.geometry.colors[currentMap.selected.index]);
+		}
+		currentMap.selected.object.geometry.colors[currentMap.selected.index].set( 0x55eeff );
+		currentMap.lastSelected = currentMap.selected.index;
+
+		currentMap.stars.geometry.colorsNeedUpdate = true;
+	} else {
+		currentMap.selected = false;
+	}
 }
 
 function starSprite() {
@@ -216,6 +162,66 @@ function zoom (direction, pan) {
 	} else {
 		clearInterval(zooming);
 		zooming = false;
+	}
+}
+
+function createStarGeometry(stars) {
+	var starGeometry = new THREE.Geometry();
+	starGeometry.vertices = stars.map(function(star) {
+		return new THREE.Vector3( star.x, star.y, star.z);
+	});
+	starGeometry.colors = stars.map(function(star) {
+		var hsl = 'hsl(' + star.h + ', ' + Math.abs(star.s) + '%, ' + star.l + '%)';
+		return new THREE.Color(hsl);
+	});
+	starGeometry.label = stars.map(function(star) {
+		return star.name;
+	});
+	starGeometry.starId = stars.map(function(star) {
+		return star.id;
+	});
+	starGeometry.rotateY(2.5);
+	starGeometry.rotateX(0.2);
+	starGeometry.rotateZ(-0.2);
+
+	return starGeometry;
+}
+
+function createStarMaterial() {
+	var sprite = new THREE.CanvasTexture(starSprite());
+	return new THREE.PointsMaterial({
+		size: 0.9,
+		vertexColors: THREE.VertexColors,
+		map: sprite,
+		blending: THREE.AdditiveBlending,
+		transparent: true,
+		depthWrite: false,
+	});
+}
+
+function Map(type) {
+	this.type = type;
+	this.scene = new THREE.Scene();
+	this.scene.fog = new THREE.FogExp2(0x5500dd, 0.01);
+	this.camera = new THREE.PerspectiveCamera( 75, window.innerWidth/window.innerHeight, 0.1, 1000 );
+}
+
+function setUpStarMap (star_id) {
+	var starMap = new Map('star');
+	switchMap(starMap);
+	$('.label').text(star_id);
+	$('.back').css('display', 'block');
+	$('.zoom-controls').css('display', 'none');
+}
+
+function switchMap (map) {
+	if (map) {
+		saveMainMap = currentMap;
+		currentMap = map;
+	} else {
+		currentMap = saveMainMap;
+		$('.zoom-controls').css('display', 'block');
+		$('.back').css('display', 'none');
 	}
 }
 
