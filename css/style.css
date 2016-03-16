@@ -5,6 +5,7 @@
 
 body {
 	overflow: hidden;
+	color: #FFF;
 }
 
 canvas {
@@ -19,7 +20,6 @@ canvas {
 	margin-left: 2%;
 	margin-top: 2%;
 	font-size: 2em;
-	color: #FFF;
 	display: none;
 }
 
@@ -39,6 +39,21 @@ canvas {
 	left: 0;
 	right: 0;
 	font-size: 2em;
-	color: #FFF;
 	margin: 0 auto;
+}
+
+.info {
+	position: fixed;
+	top: 0;
+	right: 0;
+	font-size: 1em;
+}
+
+.mobile-controls {
+	display: none;
+	position: fixed;
+	top: 0;
+	right: 0;
+	padding: 2%;
+	font-size: 3em;
 }

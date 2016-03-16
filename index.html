@@ -4,12 +4,18 @@
 		<meta charset=utf-8>
 		<title>StarMap</title>
 		<link rel="stylesheet" href="css/style.css">
+		<link rel="manifest" href="manifest.json">
 	</head>
 	<body>
-		<div class="back">
+		<div class="mobile-controls">
+			<div id="vr-toggle">
+				VR mode
+			</div>
+		</div>
+		<div class="back hide-mobile">
 			<
 		</div>
-		<div class="zoom-controls">
+		<div class="zoom-controls hide-mobile">
 			<div id="zoom-in">
 				+
 			</div>
@@ -17,10 +23,14 @@
 				-
 			</div>
 		</div>
-		<div class="label">
+		<div class="label hide-mobile">
+
+		</div>
+		<div class="info hide-mobile">
 		
 		</div>
 		<script src="scripts/three.min.js"></script>
+		<script src="scripts/StereoEffect.js"></script>
 		<script src="https://code.jquery.com/jquery-2.2.1.min.js"></script>
 		<script src="scripts/main.js"></script>
 	</body>

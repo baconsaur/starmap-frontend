@@ -2,18 +2,33 @@ renderer = new THREE.WebGLRenderer();
 renderer.setSize( window.innerWidth, window.innerHeight );
 document.body.appendChild( renderer.domElement );
 
+effect = new THREE.StereoEffect(renderer);
+effect.setSize( window.innerWidth, window.innerHeight );
+
 var currentMap;
 var saveMainMap;
 var zooming;
 var shift = false;
 var raycaster = new THREE.Raycaster();
 var cursor = new THREE.Vector2();
+var mobileMode = false;
+var vrMode = false;
 
 $(document).ready(function() {
-	createEventListeners();
-	var galaxyMap = new Map('galaxy');
+	mobileMode = checkForMobile();
 
-	$.get('https://star-map.herokuapp.com/stars')
+	if (!mobileMode) {
+		createWebEventListeners();
+	} else {
+		$('.hide-mobile').css('display', 'none');
+		$('.mobile-controls').css('display', 'block');
+		createMobileEventListeners();
+	}
+
+	var galaxyMap = new Map('galaxy');
+	galaxyMap.scene.fog = new THREE.FogExp2(0x4400dd, 0.005);
+
+	$.get('http://localhost:3000/stars')
 	.done(function(stars) {
 		galaxyMap.stars = new THREE.Points(createStarsGeometry(stars), createStarsMaterial());
 		galaxyMap.scene.add(galaxyMap.stars);
@@ -33,7 +48,11 @@ function render () {
 		updateGalaxyMap();
 	}
 
-	renderer.render(currentMap.scene, currentMap.camera);
+	if(vrMode) {
+		effect.render(currentMap.scene, currentMap.camera);
+	} else {
+		renderer.render(currentMap.scene, currentMap.camera);
+	}
 }
 
 function updateGalaxyMap() {
@@ -50,7 +69,7 @@ function updateGalaxyMap() {
 			}
 			currentMap.lastSelectedColor = new THREE.Color().copy(currentMap.selected.object.geometry.colors[currentMap.selected.index]);
 		}
-		currentMap.selected.object.geometry.colors[currentMap.selected.index].set( 0x55eeff );
+		currentMap.selected.object.geometry.colors[currentMap.selected.index].set( 0xffffff );
 		currentMap.lastSelected = currentMap.selected.index;
 
 		currentMap.stars.geometry.colorsNeedUpdate = true;
@@ -75,7 +94,7 @@ function starSprite() {
 	return canvas;
 }
 
-function createEventListeners() {
+function createWebEventListeners() {
 	$(document).on('keydown', function(event) {
 		if(!zooming) {
 			checkInputValues(event);
@@ -110,6 +129,12 @@ function createEventListeners() {
 	$(window).on('keyup', function(event) {
 		zoom(0);
 		shift = false;
+	});
+}
+
+function createMobileEventListeners() {
+	$('#vr-toggle').click(function() {
+		toggleVR();
 	});
 }
 
@@ -151,12 +176,12 @@ function zoom (direction, pan) {
 		zooming = setInterval(function(){
 			if(pan) {
 				if (pan > 0) {
-					currentMap.camera.position.x -= direction;
+					currentMap.camera.position.x -= direction/2;
 				} else {
-					currentMap.camera.position.y += direction;
+					currentMap.camera.position.y += direction/2;
 				}
-			} else if(direction > 0 && currentMap.camera.position.z >= 100 || direction < 0 && currentMap.camera.position.z <= 400) {
-				currentMap.camera.position.z -= direction;
+			} else if(direction > 0 && currentMap.camera.position.z >= 100 || direction < 0 && currentMap.camera.position.z <= 500) {
+				currentMap.camera.position.z -= direction/2;
 			}
 		}, 10);
 	} else {
@@ -171,7 +196,7 @@ function createStarsGeometry(stars) {
 		return new THREE.Vector3( star.x, star.y, star.z);
 	});
 	starGeometry.colors = stars.map(function(star) {
-		var hsl = 'hsl(' + star.h + ', ' + Math.abs(star.s) + '%, ' + (star.l * 0.8) + '%)';
+		var hsl = 'hsl(' + star.h + ', ' + Math.abs(star.s) + '%, ' + Math.floor(star.l) + '%)';
 		return new THREE.Color(hsl);
 	});
 	starGeometry.label = stars.map(function(star) {
@@ -199,27 +224,35 @@ function createStarsMaterial() {
 	});
 }
 
-function createOneStarGeometry() {
+function createOneStarGeometry(starData) {
+	var hsl = 'hsl(' + starData.h + ', ' + (starData.l * 1.5) + '%, ' + starData.l + '%)';
+	$('.label').text(starData.name);
+	$('.info').text(starData.x + ', ' + starData.y + ', ' + starData.z);
+	var geometry = new THREE.SphereGeometry( starData.l, 32, 32 );
+	var material = new THREE.MeshBasicMaterial( { color: hsl } );
+	var cube = new THREE.Mesh( geometry, material );
+	currentMap.scene.add( cube );
 
+	currentMap.camera.position.z = 150;
+
+	console.log(starData);
 }
 
 function Map(type) {
 	this.type = type;
 	this.scene = new THREE.Scene();
-	this.scene.fog = new THREE.FogExp2(0x4400dd, 0.005);
-	this.camera = new THREE.PerspectiveCamera( 75, window.innerWidth/window.innerHeight, 0.1, 280 );
+	this.camera = new THREE.PerspectiveCamera( 75, window.innerWidth/window.innerHeight, 0.1, 400 );
 }
 
 function setUpStarMap (star_id) {
 	var starMap = new Map('star');
 	switchMap(starMap);
-	$('.label').text(star_id);
 	$('.back').css('display', 'block');
 	$('.zoom-controls').css('display', 'none');
-	$.get('https://star-map.herokuapp.com/stars/' + star_id)
-		.then(function(starData) {
-			createOneStarGeometry(starData);
-		});
+	$.get('http://localhost:3000/stars/' + star_id)
+	.then(function(starData) {
+		createOneStarGeometry(starData);
+	});
 }
 
 function switchMap (map) {
@@ -230,6 +263,24 @@ function switchMap (map) {
 		currentMap = saveMainMap;
 		$('.zoom-controls').css('display', 'block');
 		$('.back').css('display', 'none');
+		$('.info').text('');
 	}
 }
 
+function checkForMobile() {
+	try {
+		document.createEvent("TouchEvent");
+		return true;
+	} catch(error) {
+		return false;
+	}
+}
+
+function toggleVR() {
+	if (vrMode) {
+		vrMode = false;
+		renderer.setSize( window.innerWidth, window.innerHeight );
+		return;
+	}
+	vrMode = true;
+}
