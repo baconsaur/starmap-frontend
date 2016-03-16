@@ -13,13 +13,13 @@ $(document).ready(function() {
 	createEventListeners();
 	var galaxyMap = new Map('galaxy');
 
-	$.get('http://localhost:3000/stars')
+	$.get('https://star-map.herokuapp.com/stars')
 	.done(function(stars) {
-		galaxyMap.stars = new THREE.Points(createStarGeometry(stars), createStarMaterial());
+		galaxyMap.stars = new THREE.Points(createStarsGeometry(stars), createStarsMaterial());
 		galaxyMap.scene.add(galaxyMap.stars);
 
 		currentMap = galaxyMap;
-		currentMap.camera.position.z = 200;
+		currentMap.camera.position.z = 300;
 		currentMap.lastSelected = false;
 
 		render();
@@ -66,9 +66,9 @@ function starSprite() {
 
 	var context = canvas.getContext( '2d' );
 	var gradient = context.createRadialGradient( canvas.width / 2, canvas.height / 2, 0, canvas.width / 2, canvas.height / 2, canvas.width / 2 );
-	gradient.addColorStop( 0.25, 'rgba(255,255,255,1)' );
-	gradient.addColorStop( 0.4, 'rgba(255,255,255,0.5)' );
-	gradient.addColorStop( 0.8, 'rgba(255,255,255,0)' );
+	gradient.addColorStop( 0.1, 'rgba(255,255,255,1)' );
+	gradient.addColorStop( 0.3, 'rgba(255,255,255,0.3)' );
+	gradient.addColorStop( 0.9, 'rgba(255,255,255,0)' );
 	context.fillStyle = gradient;
 	context.fillRect( 0, 0, canvas.width, canvas.height );
 
@@ -155,7 +155,7 @@ function zoom (direction, pan) {
 				} else {
 					currentMap.camera.position.y += direction;
 				}
-			} else if(direction > 0 && currentMap.camera.position.z >= 100 || direction < 0 && currentMap.camera.position.z <= 300) {
+			} else if(direction > 0 && currentMap.camera.position.z >= 100 || direction < 0 && currentMap.camera.position.z <= 400) {
 				currentMap.camera.position.z -= direction;
 			}
 		}, 10);
@@ -165,13 +165,13 @@ function zoom (direction, pan) {
 	}
 }
 
-function createStarGeometry(stars) {
+function createStarsGeometry(stars) {
 	var starGeometry = new THREE.Geometry();
 	starGeometry.vertices = stars.map(function(star) {
 		return new THREE.Vector3( star.x, star.y, star.z);
 	});
 	starGeometry.colors = stars.map(function(star) {
-		var hsl = 'hsl(' + star.h + ', ' + Math.abs(star.s) + '%, ' + star.l + '%)';
+		var hsl = 'hsl(' + star.h + ', ' + Math.abs(star.s) + '%, ' + (star.l * 0.8) + '%)';
 		return new THREE.Color(hsl);
 	});
 	starGeometry.label = stars.map(function(star) {
@@ -187,10 +187,10 @@ function createStarGeometry(stars) {
 	return starGeometry;
 }
 
-function createStarMaterial() {
+function createStarsMaterial() {
 	var sprite = new THREE.CanvasTexture(starSprite());
 	return new THREE.PointsMaterial({
-		size: 0.9,
+		size: 1,
 		vertexColors: THREE.VertexColors,
 		map: sprite,
 		blending: THREE.AdditiveBlending,
@@ -199,11 +199,15 @@ function createStarMaterial() {
 	});
 }
 
+function createOneStarGeometry() {
+
+}
+
 function Map(type) {
 	this.type = type;
 	this.scene = new THREE.Scene();
-	this.scene.fog = new THREE.FogExp2(0x5500dd, 0.01);
-	this.camera = new THREE.PerspectiveCamera( 75, window.innerWidth/window.innerHeight, 0.1, 1000 );
+	this.scene.fog = new THREE.FogExp2(0x4400dd, 0.005);
+	this.camera = new THREE.PerspectiveCamera( 75, window.innerWidth/window.innerHeight, 0.1, 280 );
 }
 
 function setUpStarMap (star_id) {
@@ -212,6 +216,10 @@ function setUpStarMap (star_id) {
 	$('.label').text(star_id);
 	$('.back').css('display', 'block');
 	$('.zoom-controls').css('display', 'none');
+	$.get('https://star-map.herokuapp.com/stars/' + star_id)
+		.then(function(starData) {
+			createOneStarGeometry(starData);
+		});
 }
 
 function switchMap (map) {
