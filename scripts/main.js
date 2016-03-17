@@ -1,9 +1,17 @@
 renderer = new THREE.WebGLRenderer();
-renderer.setSize( window.innerWidth, window.innerHeight );
-document.body.appendChild( renderer.domElement );
-
 effect = new THREE.StereoEffect(renderer);
+
 effect.setSize( window.innerWidth, window.innerHeight );
+renderer.setSize( window.innerWidth, window.innerHeight );
+
+element = renderer.domElement;
+container = $('#canvasContainer');
+container.append(element);
+
+clock = new THREE.Clock();
+
+var apiString = 'http://localhost:3000/stars';
+//var apiString = 'http://star-map.herokuapp.com/stars';
 
 var currentMap;
 var saveMainMap;
@@ -11,59 +19,97 @@ var zooming;
 var shift = false;
 var raycaster = new THREE.Raycaster();
 var cursor = new THREE.Vector2();
+var controls;
 var mobileMode = false;
 var vrMode = false;
+var travelDistance = 0;
 
 $(document).ready(function() {
 	mobileMode = checkForMobile();
 
-	if (!mobileMode) {
-		createWebEventListeners();
-	} else {
-		$('.hide-mobile').css('display', 'none');
-		$('.mobile-controls').css('display', 'block');
-		createMobileEventListeners();
-	}
 
 	var galaxyMap = new Map('galaxy');
 	galaxyMap.scene.fog = new THREE.FogExp2(0x4400dd, 0.005);
 
-	$.get('http://localhost:3000/stars')
+	$.get(apiString)
 	.done(function(stars) {
 		galaxyMap.stars = new THREE.Points(createStarsGeometry(stars), createStarsMaterial());
+
 		galaxyMap.scene.add(galaxyMap.stars);
 
 		currentMap = galaxyMap;
 		currentMap.camera.position.z = 300;
 		currentMap.lastSelected = false;
 
-		render();
+		if (!mobileMode) {
+			currentMap.views = createViewSprites();
+			createWebEventListeners();
+		} else {
+			$('.hide-mobile').css('display', 'none');
+			$('.mobile-controls').css('display', 'block');
+			initializeControls();
+			createMobileEventListeners();
+		}
+
+		animate();
 	});
 });
 
-function render () {
-	requestAnimationFrame( render );
-
-	if (currentMap.type == 'galaxy') {
-		updateGalaxyMap();
-	}
+function render(dt) {
+	renderer.render(currentMap.scene, currentMap.camera);
 
 	if(vrMode) {
 		effect.render(currentMap.scene, currentMap.camera);
-	} else {
-		renderer.render(currentMap.scene, currentMap.camera);
 	}
+}
+
+function update(dt) {
+	resize();
+
+	currentMap.camera.updateProjectionMatrix();
+
+	if(mobileMode) {
+		currentMap.camera.position.y -= dt;
+		controls.update(dt);
+	}
+
+	if (!mobileMode && currentMap.type == 'galaxy') {
+		updateGalaxyMap();
+	}
+}
+
+function animate (t) {
+	requestAnimationFrame(animate);
+
+	update(clock.getDelta());
+	render(clock.getDelta());
+}
+
+function resize() {
+	var width = window.innerWidth;
+	var height = window.innerHeight;
+
+	currentMap.camera.aspect = width / height;
+	currentMap.camera.updateProjectionMatrix();
+	renderer.setSize(width, height);
+	effect.setSize(width, height);
 }
 
 function updateGalaxyMap() {
 	raycaster.setFromCamera( cursor, currentMap.camera, 0, 1);	
-	var selected = raycaster.intersectObjects(currentMap.scene.children, true);
+	var selected = raycaster.intersectObject(currentMap.stars, true);
 
 	if (selected.length) {
 		currentMap.selected = selected[0];
 
 		if (currentMap.lastSelected !== currentMap.selected.index) {
 			$('.label').text(currentMap.stars.geometry.label[currentMap.selected.index]);
+			var viewCount = currentMap.stars.geometry.views[currentMap.selected.index];
+			if(viewCount > 0) {
+				$('.counter').text(viewCount + (viewCount === 1 ? ' view' : ' views'));
+			}	else {
+				$('.counter').text('');
+			}
 			if (currentMap.lastSelectedColor) {
 				currentMap.stars.geometry.colors[currentMap.lastSelected].set(currentMap.lastSelectedColor);
 			}
@@ -78,16 +124,26 @@ function updateGalaxyMap() {
 	}
 }
 
-function starSprite() {
+function generateSprite(type) {
 	var canvas = document.createElement( 'canvas' );
 	canvas.width = 16;
 	canvas.height = 16;
 
 	var context = canvas.getContext( '2d' );
 	var gradient = context.createRadialGradient( canvas.width / 2, canvas.height / 2, 0, canvas.width / 2, canvas.height / 2, canvas.width / 2 );
-	gradient.addColorStop( 0.1, 'rgba(255,255,255,1)' );
-	gradient.addColorStop( 0.3, 'rgba(255,255,255,0.3)' );
-	gradient.addColorStop( 0.9, 'rgba(255,255,255,0)' );
+	if (type === 'star') {
+		gradient.addColorStop( 0.1, 'rgba(255,255,255,1)' );
+		gradient.addColorStop( 0.3, 'rgba(255,255,255,0.3)' );
+		gradient.addColorStop( 0.9, 'rgba(255,255,255,0)' );
+	} else if (type === 'view') {
+		gradient.addColorStop( 0.7, 'rgba(255,255,255,0.15)' );
+		gradient.addColorStop( 1, 'rgba(255,255,255,0)' );
+	} else {
+		gradient.addColorStop( 0.8, 'rgba(255,255,255,0.7)' );
+		gradient.addColorStop( 0.85, 'rgba(255,255,255,0.7)' );
+		gradient.addColorStop( 0.9, 'rgba(255,255,255,1)' );
+		gradient.addColorStop( 1, 'rgba(255,255,255,0)' );
+	}
 	context.fillStyle = gradient;
 	context.fillRect( 0, 0, canvas.width, canvas.height );
 
@@ -110,6 +166,11 @@ function createWebEventListeners() {
 		if (shift) {
 			trackDragging({x: event.clientX, y: event.clientY});
 		} else if (currentMap.selected) {
+			for(var i in currentMap.views) {
+				currentMap.scene.remove(currentMap.views[i]);
+			}
+			currentMap.stars.geometry.views[currentMap.selected.index]++;
+			currentMap.views = createViewSprites();
 			setUpStarMap(currentMap.stars.geometry.starId[currentMap.selected.index]);
 		}
 	});
@@ -205,6 +266,11 @@ function createStarsGeometry(stars) {
 	starGeometry.starId = stars.map(function(star) {
 		return star.id;
 	});
+
+	starGeometry.views = stars.map(function(star) {
+		return star.views;
+	});
+
 	starGeometry.rotateY(2.5);
 	starGeometry.rotateX(0.2);
 	starGeometry.rotateZ(-0.2);
@@ -213,7 +279,7 @@ function createStarsGeometry(stars) {
 }
 
 function createStarsMaterial() {
-	var sprite = new THREE.CanvasTexture(starSprite());
+	var sprite = new THREE.CanvasTexture(generateSprite('star'));
 	return new THREE.PointsMaterial({
 		size: 1,
 		vertexColors: THREE.VertexColors,
@@ -225,17 +291,15 @@ function createStarsMaterial() {
 }
 
 function createOneStarGeometry(starData) {
-	var hsl = 'hsl(' + starData.h + ', ' + (starData.l * 1.5) + '%, ' + starData.l + '%)';
+	var hsl = 'hsl(' + starData.h + ', ' + Math.floor(starData.l * 1.5) + '%, ' + starData.l + '%)';
 	$('.label').text(starData.name);
-	$('.info').text(starData.x + ', ' + starData.y + ', ' + starData.z);
+	$('.info').text(starData.x + ', ' + starData.y + ', ' + starData.z + ' Views: ' + starData.views);
 	var geometry = new THREE.SphereGeometry( starData.l, 32, 32 );
 	var material = new THREE.MeshBasicMaterial( { color: hsl } );
 	var cube = new THREE.Mesh( geometry, material );
 	currentMap.scene.add( cube );
 
 	currentMap.camera.position.z = 150;
-
-	console.log(starData);
 }
 
 function Map(type) {
@@ -249,7 +313,7 @@ function setUpStarMap (star_id) {
 	switchMap(starMap);
 	$('.back').css('display', 'block');
 	$('.zoom-controls').css('display', 'none');
-	$.get('http://localhost:3000/stars/' + star_id)
+	$.get(apiString + '/' + star_id)
 	.then(function(starData) {
 		createOneStarGeometry(starData);
 	});
@@ -265,6 +329,28 @@ function switchMap (map) {
 		$('.back').css('display', 'none');
 		$('.info').text('');
 	}
+}
+
+function createViewSprites() {
+	var sprites = [];
+	for (var i in currentMap.stars.geometry.vertices) {
+		if(currentMap.stars.geometry.views[i]) {
+			var	size = currentMap.stars.geometry.views[i];
+			var material = new THREE.SpriteMaterial({
+				map: new THREE.CanvasTexture(generateSprite('view')),
+				color: 0x55ff77,
+				blending: THREE.AdditiveBlending
+			});
+			var sprite = new THREE.Sprite(material);
+			sprite.scale.set(size, size, 1);
+			sprite.position.copy(currentMap.stars.geometry.vertices[i]);
+			sprite.starId = currentMap.stars.geometry.starId[i];
+
+			sprites.push(sprite);
+			currentMap.scene.add(sprite);
+		}
+	}
+	return sprites;
 }
 
 function checkForMobile() {
@@ -283,4 +369,41 @@ function toggleVR() {
 		return;
 	}
 	vrMode = true;
+}
+
+function initializeControls() {
+	controls = new THREE.OrbitControls(currentMap.camera, element);
+	controls.target.set(
+		currentMap.camera.position.x + 0.1,
+		currentMap.camera.position.y,
+		currentMap.camera.position.z
+	);
+
+	window.addEventListener('deviceorientation', setOrientationControls, true);
+}
+
+function setOrientationControls(event) {
+	if (!event.alpha) {
+		return;
+	}
+
+	controls = new THREE.DeviceOrientationControls(currentMap.camera, true);
+	controls.connect();
+	controls.update();
+
+	element.addEventListener('click', fullscreen, false);
+
+	window.removeEventListener('deviceorientation', setOrientationControls, true);
+}
+
+function fullscreen() {
+	if (container.requestFullscreen) {
+		container.requestFullscreen();
+	} else if (container.msRequestFullscreen) {
+		container.msRequestFullscreen();
+	} else if (container.mozRequestFullScreen) {
+		container.mozRequestFullScreen();
+	} else if (container.webkitRequestFullscreen) {
+		container.webkitRequestFullscreen();
+	}
 }
