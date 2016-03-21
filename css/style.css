@@ -63,3 +63,33 @@ body {
 	padding: 2%;
 	font-size: 3em;
 }
+
+.search {
+	display: flex;
+	flex-direction: column;
+	position: fixed;
+	top: -14em;
+	right: 0;
+	width: 4em;
+	height: 10em;
+	margin: 2%;
+	padding: 2em;
+	border: 1px solid #0ff;
+	border-radius: 20px;
+	background-color: rgba(0, 0, 0, 0.7);
+}
+
+.search span {
+	display: flex;
+	flex-direction: row;
+	justify-content: space-between;
+}
+
+.search h2 {
+	text-align: center;
+	font-size: 1em;
+	font-weight: normal;
+	color: gray;
+	margin-bottom: -1.7em;
+	padding-top: 1em;
+}
