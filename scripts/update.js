@@ -12,7 +12,6 @@ function update(dt) {
 	currentMap.camera.updateProjectionMatrix();
 
 	if(mobileMode) {
-//		currentMap.camera.position.y -= dt;
 		controls.update(dt);
 	}
 
@@ -58,4 +57,12 @@ function updateGalaxyMap() {
 	} else {
 		currentMap.selected = false;
 	}
+}
+
+function getCameraDirection() {
+	width = window.innerWidth;
+	height = window.innerHeight;
+	var screenCenter = new THREE.Vector2(width - 1, height + 1);
+	raycaster.setFromCamera(screenCenter, currentMap.camera);
+	return raycaster.ray.direction;
 }

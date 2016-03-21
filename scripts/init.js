@@ -30,8 +30,8 @@ effect = new THREE.StereoEffect(renderer);
 effect.setSize( window.innerWidth, window.innerHeight );
 renderer.setSize( window.innerWidth, window.innerHeight );
 
-element = renderer.domElement;
-container = $('#canvasContainer');
+var element = renderer.domElement;
+var container = $('#canvasContainer');
 container.append(element);
 
 clock = new THREE.Clock();
@@ -49,13 +49,14 @@ function init() {
     galaxyMap.scene.add(galaxyMap.stars);
 
     currentMap = galaxyMap;
-    currentMap.camera.position.z = 300;
     currentMap.lastSelected = false;
 
     if (!mobileMode) {
+    	currentMap.camera.position.z = 300;
       currentMap.views = createViewSprites();
       createWebEventListeners();
     } else {
+    	currentMap.camera.position.z = 300;
       $('.hide-mobile').css('display', 'none');
       $('.mobile-controls').css('display', 'block');
       initializeControls();
@@ -149,6 +150,12 @@ function createWebEventListeners() {
 }
 
 function createMobileEventListeners() {
+	$('canvas').on('touchstart', function() {
+		controls.movementSpeed = 100;
+	});
+	$('canvas').on('touchend', function() {
+		controls.movementSpeed = 5;
+	});
 	$('#vr-toggle').click(function() {
 		toggleVR();
 	});
