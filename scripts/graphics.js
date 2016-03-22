@@ -7,10 +7,13 @@ function generateSprite(type) {
 	var gradient = context.createRadialGradient( canvas.width / 2, canvas.height / 2, 0, canvas.width / 2, canvas.height / 2, canvas.width / 2 );
 	if (type === 'star') {
 		gradient.addColorStop( 0.3, 'rgba(255,255,255,1)' );
-		gradient.addColorStop( 0.6, 'rgba(255,255,255,0.3)' );
+		gradient.addColorStop( 0.6, 'rgba(255,255,255,0.5)' );
 		gradient.addColorStop( 0.9, 'rgba(255,255,255,0)' );
 	} else if (type === 'view') {
-		gradient.addColorStop( 0.7, 'rgba(255,255,255,0.15)' );
+		gradient.addColorStop( 0.7, 'rgba(255,255,255,0.5)' );
+		gradient.addColorStop( 1, 'rgba(255,255,255,0)' );
+	} else if (type === 'glow') {
+		gradient.addColorStop( 0, 'rgba(255,255,255,0.015)' );
 		gradient.addColorStop( 1, 'rgba(255,255,255,0)' );
 	} else {
 		gradient.addColorStop( 0.8, 'rgba(255,255,255,0.7)' );
@@ -32,7 +35,8 @@ function createViewSprites() {
 			var material = new THREE.SpriteMaterial({
 				map: new THREE.CanvasTexture(generateSprite('view')),
 				color: 0x55ff77,
-				blending: THREE.AdditiveBlending
+//				blending: THREE.AdditiveBlending
+				fog: false
 			});
 			var sprite = new THREE.Sprite(material);
 			sprite.scale.set(size, size, 1);
@@ -89,6 +93,18 @@ function createStarsGeometry(stars) {
 	return starGeometry;
 }
 
+function createGlowGeometry(stars){
+	var starGeometry = new THREE.Geometry();
+	var brightStars = [];
+	for (var i=0;i<stars.length;i+=100) {
+		brightStars.push(stars[i]);
+	}
+	starGeometry.vertices = brightStars.map(function(star) {
+		return new THREE.Vector3( star.x, star.y, star.z);
+	});
+	return starGeometry;
+}
+
 function createStarsMaterial() {
 	var sprite = new THREE.CanvasTexture(generateSprite('star'));
 	return new THREE.PointsMaterial({
@@ -98,6 +114,19 @@ function createStarsMaterial() {
 		blending: THREE.AdditiveBlending,
 		transparent: true,
 		depthWrite: false,
+	});
+}
+
+function createGlowMaterial() {
+	var sprite = new THREE.CanvasTexture(generateSprite('glow'));
+	return new THREE.PointsMaterial({
+		size: 200,
+		color: new THREE.Color(0x9335eb),
+		map: sprite,
+		blending: THREE.AdditiveBlending,
+		transparent: true,
+		depthWrite: false,
+		fog: false
 	});
 }
 

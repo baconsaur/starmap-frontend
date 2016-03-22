@@ -1,7 +1,9 @@
+socket = io('http://localhost:3000');
 var currentMap;
 var saveMainMap;
 var zooming;
 var shift = false;
+var alt = false;
 var raycaster = new THREE.Raycaster();
 var cursor = new THREE.Vector2();
 var controls;
@@ -20,11 +22,13 @@ var filterValues = {
 	distance: 100,
 	search : ''
 };
+var userID;
+var users = {};
 
 var apiString = 'http://localhost:3000/stars';
 //var apiString = 'http://star-map.herokuapp.com/stars';
 
-renderer = new THREE.WebGLRenderer();
+renderer = new THREE.WebGLRenderer({alpha: true}) ;
 effect = new THREE.StereoEffect(renderer);
 
 effect.setSize( window.innerWidth, window.innerHeight );
@@ -37,34 +41,69 @@ container.append(element);
 clock = new THREE.Clock();
 
 function init() {
-  mobileMode = checkForMobile();
+	mobileMode = checkForMobile();
 
-  var galaxyMap = new Map('galaxy');
-  galaxyMap.scene.fog = new THREE.FogExp2(0x4400dd, 0.004);
+	var galaxyMap = new Map('galaxy');
+	galaxyMap.scene.fog = new THREE.FogExp2(0x4400dd, 0.004);
 
-  $.get(apiString)
-  .done(function(stars) {
-    galaxyMap.stars = new THREE.Points(createStarsGeometry(stars), createStarsMaterial());
+	$.get(apiString)
+	.done(function(stars) {
+		galaxyMap.stars = new THREE.Points(createStarsGeometry(stars), createStarsMaterial());
+		galaxyMap.scene.add(galaxyMap.stars);
 
-    galaxyMap.scene.add(galaxyMap.stars);
+		currentMap = galaxyMap;
+		currentMap.lastSelected = false;
 
-    currentMap = galaxyMap;
-    currentMap.lastSelected = false;
+		currentMap.glow = new THREE.Points(createGlowGeometry(stars), createGlowMaterial());
+		currentMap.scene.add(currentMap.glow);
 
-    if (!mobileMode) {
-    	currentMap.camera.position.z = 300;
-      currentMap.views = createViewSprites();
-      createWebEventListeners();
-    } else {
-    	currentMap.camera.position.z = 300;
-      $('.hide-mobile').css('display', 'none');
-      $('.mobile-controls').css('display', 'block');
-      initializeControls();
-      createMobileEventListeners();
-    }
+		currentMap.ambientLight = new THREE.AmbientLight( 0x403745 );
+		currentMap.directionalLight = new THREE.DirectionalLight( 0xffffdd, 0.6 );
+		currentMap.directionalLight.position.set( 1, 1, 0 );
 
-    animate();
-  });
+		currentMap.scene.add( currentMap.directionalLight );
+		currentMap.scene.add( currentMap.ambientLight );
+
+		var textureLoader = new THREE.TextureLoader();
+		var textureFlare0 = textureLoader.load( "../lensflare0.png" );
+		var textureFlare2 = textureLoader.load( "../lensflare2.png" );
+		var textureFlare3 = textureLoader.load( "../lensflare3.png" );
+
+		var flareColor = new THREE.Color( 0xffffff );
+		var lensFlare = new THREE.LensFlare( textureFlare0, 256, 0.0, THREE.AdditiveBlending, flareColor );
+
+		lensFlare.add( textureFlare2, 256, 0.0, THREE.AdditiveBlending );
+		lensFlare.add( textureFlare2, 256, 0.0, THREE.AdditiveBlending );
+		lensFlare.add( textureFlare2, 256, 0.0, THREE.AdditiveBlending );
+
+		lensFlare.add( textureFlare3, 40, 0.3, THREE.AdditiveBlending );
+		lensFlare.add( textureFlare3, 85, 0.5, THREE.AdditiveBlending );
+		lensFlare.add( textureFlare3, 128, 0.7, THREE.AdditiveBlending );
+		lensFlare.add( textureFlare3, 50, 0.85, THREE.AdditiveBlending );
+		lensFlare.add( textureFlare3, 256, 0.9, THREE.AdditiveBlending );
+		lensFlare.add( textureFlare3, 90, 1.0, THREE.AdditiveBlending );
+		
+		lensFlare.position.set(0,0,0);
+
+		currentMap.scene.add( lensFlare );
+
+		socket.emit('new', {position: {x: currentMap.camera.position.x, y: currentMap.camera.position.y, z: currentMap.camera.position.z}, rotation: {x: currentMap.camera.rotation.x, y: currentMap.camera.rotation.y, z: currentMap.camera.rotation.z}});		
+		userID = '/#' + socket.io.engine.id;
+
+		if (!mobileMode) {
+			currentMap.camera.position.z = 200;
+			currentMap.views = createViewSprites();
+			createWebEventListeners();
+		} else {
+			currentMap.camera.position.z = 200;
+			$('.hide-mobile').css('display', 'none');
+			$('.mobile-controls').css('display', 'block');
+			initializeControls();
+			createMobileEventListeners();
+		}
+
+		animate();
+	});
 }
 
 function checkForMobile() {
@@ -98,7 +137,7 @@ function createWebEventListeners() {
 		zoom(-1);
 	});
 	$('canvas').on('mousedown', function(event) {
-		if (shift) {
+		if (shift || alt) {
 			trackDragging({x: event.clientX, y: event.clientY});
 		} else if (currentMap.selected) {
 			for(var i in currentMap.views) {
@@ -124,6 +163,7 @@ function createWebEventListeners() {
 	});
 	$(window).on('keyup', function(event) {
 		zoom(0);
+		alt = false;
 		shift = false;
 	});
 

@@ -2,10 +2,15 @@ function trackDragging(oldCoords) {
 	$('canvas').on('mousemove', function(event){
 		var deltaX = oldCoords.x - event.clientX;
 		var deltaY = oldCoords.y - event.clientY;
-		currentMap.camera.position.x += deltaX/10;
-		currentMap.camera.position.y -= deltaY/10;
+		if (shift) {
+			currentMap.camera.position.x += deltaX/10;
+			currentMap.camera.position.y -= deltaY/10;
+		} else if (alt) {
+			currentMap.camera.rotation.x += deltaY/100;
+			currentMap.camera.rotation.y += deltaX/100;
+		}
 		$('canvas').off('mousemove');
-		if(shift) {
+		if(shift || alt) {
 			trackDragging({x: event.clientX, y: event.clientY});
 		}
 	});
@@ -26,6 +31,8 @@ function checkInputValues(event) {
 		zoom(-1, -1);
 	} else if (event.which == 16) {
 		shift = true;
+	} else if (event.which == 18) {
+		alt = true;
 	} else {
 		zoom(0);
 	}
@@ -40,7 +47,7 @@ function zoom (direction, pan) {
 				} else {
 					currentMap.camera.position.y += direction/2;
 				}
-			} else if(direction > 0 && currentMap.camera.position.z >= 100 || direction < 0 && currentMap.camera.position.z <= 500) {
+			} else if(direction > 0 && currentMap.camera.position.z >= 0 || direction < 0 && currentMap.camera.position.z <= 500) {
 				currentMap.camera.position.z -= direction/2;
 			}
 		}, 10);

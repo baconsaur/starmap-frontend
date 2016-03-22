@@ -1,8 +1,0 @@
-{
-	"manifest_version": 1,
-	"name": "StarMap",
-	"version": "0.1.0",
-
-	"display": "fullscreen", 
-	"orientation": "landscape" 
-}
