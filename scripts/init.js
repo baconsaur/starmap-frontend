@@ -1,5 +1,5 @@
-socket = io('http://localhost:3000');
-//socket = io('http://star-map.herokuapp.com');
+//socket = io('http://localhost:3000');
+socket = io('http://star-map.herokuapp.com');
 var currentMap;
 var saveMainMap;
 var zooming;
@@ -31,8 +31,8 @@ var glowTexture;
 var glowAnimator;
 var starAnimator;
 
-var apiString = 'http://localhost:3000/stars';
-//var apiString = 'http://star-map.herokuapp.com/stars';
+//var apiString = 'http://localhost:3000/stars';
+var apiString = 'http://star-map.herokuapp.com/stars';
 
 renderer = new THREE.WebGLRenderer({alpha: true}) ;
 effect = new THREE.StereoEffect(renderer);
@@ -196,16 +196,18 @@ function createWebEventListeners() {
 	$('.search h2').on('click', function(event) {
 		$('.search').toggleClass('maximized');
 		if($('.search').hasClass('maximized')) {
-			$('.search h2').text('Hide');
+			$('.search h2 i').toggleClass('fa-cogs');
+			$('.search h2 i').toggleClass('fa-minus');
 			$('.search').animate({
 				'width': '20%',
 				'top': '0'
 			}, 'fast');	
 		} else {
-			$('.search h2').text('Settings');
+			$('.search h2 i').toggleClass('fa-cogs');
+			$('.search h2 i').toggleClass('fa-minus');
 			$('.search').animate({
-				'width': '4em',
-				'top': '-14em'
+				'width': '2em',
+				'top': '-18em'
 			}, 'fast');	
 		}
 	});
@@ -220,6 +222,7 @@ function createMobileEventListeners() {
 	});
 	$('#vr-toggle').click(function() {
 		toggleVR();
+		$('#vr-toggle').css('display', 'none');
 	});
 }
 
