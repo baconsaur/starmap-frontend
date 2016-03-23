@@ -15,6 +15,10 @@ function generateSprite(type) {
 	} else if (type === 'glow') {
 		gradient.addColorStop( 0, 'rgba(255,255,255,0.015)' );
 		gradient.addColorStop( 1, 'rgba(255,255,255,0)' );
+	} else if (type === 'corona') {
+		gradient.addColorStop( 0, 'rgba(255,255,255,1)' );
+		gradient.addColorStop( 0.5, 'rgba(255,255,255,0.3)' );
+		gradient.addColorStop( 1, 'rgba(255,255,255,0)' );
 	} else {
 		gradient.addColorStop( 0.8, 'rgba(255,255,255,0.7)' );
 		gradient.addColorStop( 0.85, 'rgba(255,255,255,0.7)' );
@@ -42,6 +46,7 @@ function createViewSprites() {
 			sprite.scale.set(size, size, 1);
 			sprite.position.copy(currentMap.stars.geometry.vertices[i]);
 			sprite.starId = currentMap.stars.geometry.starId[i];
+			sprite.visible = false;
 
 			sprites.push(sprite);
 			currentMap.scene.add(sprite);
@@ -56,7 +61,9 @@ function createStarsGeometry(stars) {
 		return new THREE.Vector3( star.x, star.y, star.z);
 	});
 	starGeometry.colors = stars.map(function(star) {
-		return new THREE.Color('rgb(' + Math.floor(star.r) + ', ' + Math.floor(star.g) + ', ' + Math.floor(star.b) +')');
+		var rgb = new THREE.Color('rgb(' + Math.floor(star.r) + ', ' + Math.floor(star.g) + ', ' + Math.floor(star.b) +')');
+		var hsl = rgb.getHSL();
+		return new THREE.Color().setHSL(hsl.h, 1, hsl.l);
 	});
 	starGeometry.label = stars.map(function(star) {
 		return star.name;
@@ -119,6 +126,17 @@ function createStarsMaterial() {
 
 function createGlowMaterial() {
 	var sprite = new THREE.CanvasTexture(generateSprite('glow'));
+	if (mobileMode) {
+		return new THREE.PointsMaterial({
+			size: 150,
+			color: new THREE.Color(0x4A0887),
+			map: sprite,
+			blending: THREE.AdditiveBlending,
+			transparent: true,
+			depthWrite: false,
+			fog: false
+		});
+	}
 	return new THREE.PointsMaterial({
 		size: 200,
 		color: new THREE.Color(0x9335eb),
@@ -128,17 +146,37 @@ function createGlowMaterial() {
 		depthWrite: false,
 		fog: false
 	});
+
 }
 
 function createOneStarGeometry(starData) {
-	console.log(starData);
 	$('.label').text(starData.name);
 	$('.info').text('Distance: ' + starData.distance + ' light years');
 	$('.search').css('display', 'none');
+	
 	var geometry = new THREE.SphereGeometry( starData.mag, 32, 32 );
-	var material = new THREE.MeshBasicMaterial( { color: 'rgb(' + Math.floor(starData.r-50) + ', ' + Math.floor(starData.g-50) + ', ' + Math.floor(starData.b-50) +')' } );
-	var cube = new THREE.Mesh( geometry, material );
-	currentMap.scene.add( cube );
+	var corona = new THREE.Sprite(new THREE.SpriteMaterial({
+		map: glowTexture,
+		blending: THREE.AdditiveBlending,
+		color: 'rgb(' + Math.floor(starData.r) + ', ' + Math.floor(starData.g) + ', ' + Math.floor(starData.b) +')'
+	}));
+	var glow = new THREE.Sprite(new THREE.SpriteMaterial({
+		map: new THREE.CanvasTexture(generateSprite('corona')),
+		blending: THREE.AdditiveBlending,
+		color: 'rgb(' + Math.floor(starData.r) + ', ' + Math.floor(starData.g) + ', ' + Math.floor(starData.b) +')'
+	}));
+
+	var material = new THREE.MeshBasicMaterial( { map: starTexture, color: 'rgb(' + Math.floor(starData.r) + ', ' + Math.floor(starData.g) + ', ' + Math.floor(starData.b) +')' } );
+	currentMap.sphere = new THREE.Mesh( geometry, material );
+
+	corona.scale.set(starData.mag * 2.5, starData.mag * 2.5, 1);
+	glow.scale.set(starData.mag * 1.2, starData.mag * 1.2, 1);
+	corona.position.setZ(30);
+	glow.position.setZ(100);
+
+	currentMap.scene.add(glow);
+	currentMap.scene.add(corona);
+	currentMap.scene.add(currentMap.sphere);
 
 	currentMap.camera.position.z = 150;
 }

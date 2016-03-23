@@ -1,4 +1,5 @@
 socket = io('http://localhost:3000');
+//socket = io('http://star-map.herokuapp.com');
 var currentMap;
 var saveMainMap;
 var zooming;
@@ -24,6 +25,11 @@ var filterValues = {
 };
 var userID;
 var users = {};
+var shipModel;
+var starTexture;
+var glowTexture;
+var glowAnimator;
+var starAnimator;
 
 var apiString = 'http://localhost:3000/stars';
 //var apiString = 'http://star-map.herokuapp.com/stars';
@@ -46,6 +52,27 @@ function init() {
 	var galaxyMap = new Map('galaxy');
 	galaxyMap.scene.fog = new THREE.FogExp2(0x4400dd, 0.004);
 
+	var textureLoader = new THREE.TextureLoader();
+	var textureFlare0 = textureLoader.load( "/lensflare0.png" );
+	var textureFlare2 = textureLoader.load( "/lensflare2.png" );
+	var textureFlare3 = textureLoader.load( "/lensflare3.png" );
+	var shipTexture = textureLoader.load('scripts/ship.png');
+	starTexture = textureLoader.load('scripts/sun_texture.png');
+	glowTexture = textureLoader.load('scripts/flare_texture.png');
+
+	starAnimator = new TextureAnimator( starTexture, 5, 5, 25, 10 );
+	glowAnimator = new TextureAnimator( glowTexture, 5, 5, 25, 20 );
+
+	var loader = new THREE.JSONLoader();
+
+	loader.load('scripts/ship.js', function ( geometry ) {
+		shipModel = new THREE.Mesh( geometry, new THREE.MeshPhongMaterial({
+			map: shipTexture,
+			specular: 0x999977,
+			shininess: 20
+		}));
+	});
+
 	$.get(apiString)
 	.done(function(stars) {
 		galaxyMap.stars = new THREE.Points(createStarsGeometry(stars), createStarsMaterial());
@@ -57,17 +84,12 @@ function init() {
 		currentMap.glow = new THREE.Points(createGlowGeometry(stars), createGlowMaterial());
 		currentMap.scene.add(currentMap.glow);
 
-		currentMap.ambientLight = new THREE.AmbientLight( 0x403745 );
-		currentMap.directionalLight = new THREE.DirectionalLight( 0xffffdd, 0.6 );
-		currentMap.directionalLight.position.set( 1, 1, 0 );
+		currentMap.ambientLight = new THREE.AmbientLight( 0xa097a5 );
+		currentMap.directionalLight = new THREE.DirectionalLight( 0xdddd99, 1 );
+		currentMap.directionalLight.position.set( -0.2, 0.2, 0.1 );
 
 		currentMap.scene.add( currentMap.directionalLight );
 		currentMap.scene.add( currentMap.ambientLight );
-
-		var textureLoader = new THREE.TextureLoader();
-		var textureFlare0 = textureLoader.load( "../lensflare0.png" );
-		var textureFlare2 = textureLoader.load( "../lensflare2.png" );
-		var textureFlare3 = textureLoader.load( "../lensflare3.png" );
 
 		var flareColor = new THREE.Color( 0xffffff );
 		var lensFlare = new THREE.LensFlare( textureFlare0, 256, 0.0, THREE.AdditiveBlending, flareColor );

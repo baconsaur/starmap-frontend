@@ -138,10 +138,8 @@ function toggleSettings(event) {
 		}
 	} else if (event.target.id === "view") {
 		if($(event.target).is(':checked')) {
-			console.log('Show viewcount indicators');
 			toggleViews(true);
 		} else {
-			console.log('Hide viewcount indicators');
 			toggleViews(false);
 		}
 	} else if (event.target.id === "distance") {

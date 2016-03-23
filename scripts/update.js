@@ -11,12 +11,17 @@ function update(dt) {
 
 	currentMap.camera.updateProjectionMatrix();
 
+
 	if(mobileMode) {
 		controls.update(dt);
 	}
 
 	if (!mobileMode && currentMap.type == 'galaxy') {
 		updateGalaxyMap();
+	} else if (currentMap.type == 'star' && currentMap.sphere) {
+		starAnimator.update(80 * dt);
+		glowAnimator.update(80 * dt);
+		currentMap.sphere.rotation.y += 0.001;	
 	}
 }
 
@@ -24,12 +29,13 @@ socket.on('update', function (data) {
 	if(userID) {
 		for (var i in data) {
 			if (users[i]) {
-				users[i].position.lerp(new THREE.Vector3(data[i].position.x, data[i].position.y, data[i].position.z), 0.5);
+				var moveTo = new THREE.Vector3(data[i].position.x, data[i].position.y, data[i].position.z);
+				users[i].position.lerp(moveTo, 0.5);
 				var quaternion = new THREE.Quaternion();
-				quaternion.setFromEuler(new THREE.Euler(data[i].rotation.x, data[i].rotation.y, data[i].rotation.z));
+				quaternion.setFromEuler(new THREE.Euler(data[i].rotation.x - 1.57, data[i].rotation.y, data[i].rotation.z + 1.57));
 				users[i].quaternion.slerp(quaternion, 0.5);
 			} else if (i != userID){
-				var marker = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), new THREE.MeshPhongMaterial({color: 0xA0A0A0}));
+				var marker = shipModel.clone();
 				marker.position.set(data[i].position.x, data[i].position.y, data[i].position.z);
 				marker.rotation.set(data[i].rotation.x, data[i].rotation.y, data[i].rotation.z);
 				currentMap.scene.add(marker);
@@ -42,7 +48,7 @@ socket.on('update', function (data) {
 				delete users[i];
 			}
 		}
-		socket.emit('update', {position: {x: currentMap.camera.position.x, y: currentMap.camera.position.y, z: currentMap.camera.position.z}, rotation: {x: currentMap.camera.rotation._x, y: currentMap.camera.rotation._y, z: currentMap.camera.rotation._z}});
+		socket.emit('update', {position: {x: currentMap.camera.position.x + 1.57, y: currentMap.camera.position.y, z: currentMap.camera.position.z - 1.57}, rotation: {x: currentMap.camera.rotation._x, y: currentMap.camera.rotation._y, z: currentMap.camera.rotation._z}});
 	}
 });
 
