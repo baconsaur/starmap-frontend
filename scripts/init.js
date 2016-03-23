@@ -159,6 +159,9 @@ function createWebEventListeners() {
 		zoom(-1);
 	});
 	$('canvas').on('mousedown', function(event) {
+		if (currentMap.type == 'star') {
+			return;
+		}
 		if (shift || alt) {
 			trackDragging({x: event.clientX, y: event.clientY});
 		} else if (currentMap.selected) {

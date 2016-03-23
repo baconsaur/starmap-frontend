@@ -17,6 +17,10 @@ function trackDragging(oldCoords) {
 }
 
 function checkInputValues(event) {
+	if (currentMap.type == 'star') {
+		return;
+	}
+
 	if (event.which == 187) {
 		zoom(1);
 	} else if (event.which == 189) {
@@ -39,6 +43,10 @@ function checkInputValues(event) {
 }
 
 function zoom (direction, pan) {
+	if (currentMap.type == 'star') {
+		return;
+	}
+
 	if (direction) {
 		zooming = setInterval(function(){
 			if(pan) {
