@@ -87,18 +87,6 @@ function toggleVR() {
 	vrMode = true;
 }
 
-function fullscreen() {
-	if (container.requestFullscreen) {
-		container.requestFullscreen();
-	} else if (container.msRequestFullscreen) {
-		container.msRequestFullscreen();
-	} else if (container.mozRequestFullScreen) {
-		container.mozRequestFullScreen();
-	} else if (container.webkitRequestFullscreen) {
-		container.webkitRequestFullscreen();
-	}
-}
-
 function toggleSettings(event) {
 	if(event.target.id === "for-distance") {
 		if($(event.target).is(':checked')) {

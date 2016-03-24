@@ -19,7 +19,5 @@ function setOrientationControls(event) {
 	controls.connect();
 	controls.update();
 
-	element.addEventListener('click', fullscreen, false);
-
 	window.removeEventListener('deviceorientation', setOrientationControls, true);
 }

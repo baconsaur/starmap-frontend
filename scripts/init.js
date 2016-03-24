@@ -1,5 +1,5 @@
-//socket = io('http://localhost:3000');
-socket = io('http://star-map.herokuapp.com');
+socket = io('http://localhost:3000');
+//socket = io('http://star-map.herokuapp.com');
 var currentMap;
 var saveMainMap;
 var zooming;
@@ -31,8 +31,8 @@ var glowTexture;
 var glowAnimator;
 var starAnimator;
 
-//var apiString = 'http://localhost:3000/stars';
-var apiString = 'http://star-map.herokuapp.com/stars';
+var apiString = 'http://localhost:3000/stars';
+//var apiString = 'http://star-map.herokuapp.com/stars';
 
 renderer = new THREE.WebGLRenderer({alpha: true}) ;
 effect = new THREE.StereoEffect(renderer);
@@ -113,16 +113,22 @@ function init() {
 		userID = '/#' + socket.io.engine.id;
 
 		if (!mobileMode) {
+			$('.zoom-controls').css('display', 'block');
+			$('.search').css('display', 'flex');
+			$('.label').css('display', 'block');
+			$('.counter').css('display', 'block');
+			$('.info').css('display', 'block');
 			currentMap.camera.position.z = 200;
 			currentMap.views = createViewSprites();
 			createWebEventListeners();
 		} else {
 			currentMap.camera.position.z = 200;
-			$('.hide-mobile').css('display', 'none');
 			$('.mobile-controls').css('display', 'block');
 			initializeControls();
 			createMobileEventListeners();
 		}
+
+		$('.loading').css('display', 'none');
 
 		animate();
 	});
@@ -159,18 +165,17 @@ function createWebEventListeners() {
 		zoom(-1);
 	});
 	$('canvas').on('mousedown', function(event) {
-		if (currentMap.type == 'star') {
-			return;
-		}
-		if (shift || alt) {
-			trackDragging({x: event.clientX, y: event.clientY});
-		} else if (currentMap.selected) {
-			for(var i in currentMap.views) {
-				currentMap.scene.remove(currentMap.views[i]);
+		if (currentMap.type != 'star') {
+			if (shift || alt) {
+				trackDragging({x: event.clientX, y: event.clientY});
+			} else if (currentMap.selected) {
+				for(var i in currentMap.views) {
+					currentMap.scene.remove(currentMap.views[i]);
+				}
+				currentMap.stars.geometry.views[currentMap.selected.index]++;
+				currentMap.views = createViewSprites();
+				setUpStarMap(currentMap.stars.geometry.starId[currentMap.selected.index]);
 			}
-			currentMap.stars.geometry.views[currentMap.selected.index]++;
-			currentMap.views = createViewSprites();
-			setUpStarMap(currentMap.stars.geometry.starId[currentMap.selected.index]);
 		}
 	});
 	$(window).on('mousemove', function(event) {

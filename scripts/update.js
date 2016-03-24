@@ -82,7 +82,7 @@ function updateGalaxyMap() {
 			}
 			currentMap.lastSelectedColor = new THREE.Color().copy(currentMap.selected.object.geometry.colors[currentMap.selected.index]);
 		}
-		currentMap.selected.object.geometry.colors[currentMap.selected.index].set( 0xdd6600 );
+		currentMap.selected.object.geometry.colors[currentMap.selected.index].set( 0x00ffcc );
 		currentMap.lastSelected = currentMap.selected.index;
 
 		currentMap.stars.geometry.colorsNeedUpdate = true;

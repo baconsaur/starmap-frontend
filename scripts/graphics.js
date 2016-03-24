@@ -146,12 +146,11 @@ function createGlowMaterial() {
 		depthWrite: false,
 		fog: false
 	});
-
 }
 
 function createOneStarGeometry(starData) {
 	$('.label').text(starData.name);
-	$('.info').text('Distance: ' + starData.distance + ' light years');
+	$('.info').html('<p>Distance: ' + starData.distance + ' light years</p>' + (starData.exoplanets > 0 ? '<p>Planets: ' + starData.exoplanets + '</p>' : ''));
 	$('.search').css('display', 'none');
 	
 	var geometry = new THREE.SphereGeometry( starData.mag, 32, 32 );
